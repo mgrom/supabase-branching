@@ -63,7 +63,7 @@ see `.env.example`. key settings:
 
 | variable | default | description |
 |----------|---------|-------------|
-| `POSTGRES_PASSWORD` | — | superuser password |
+| `POSTGRES_PASSWORD` | - | superuser password |
 | `POSTGRES_DB` | `postgres` | main database |
 | `BTRFS_MOUNT` | `/mnt/pgdata` | btrfs mount for pg data |
 | `SUPABASE_POSTGRES_REF` | `develop` | upstream branch/tag to build from |
@@ -72,7 +72,7 @@ see `.env.example`. key settings:
 
 - linux only (btrfs requirement)
 - pg_data_branching is experimental / pre-alpha
-- branches share the btrfs volume — deleting volume removes all branches
+- branches share the btrfs volume - deleting volume removes all branches
 - no automatic branch-per-PR integration yet
 
 ## license
