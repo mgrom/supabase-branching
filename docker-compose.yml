@@ -1,0 +1,11 @@
+services:
+  postgres:
+    image: supabase-postgres-branching:latest
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+    volumes:
+      - /mnt/pgdata:/var/lib/postgresql/data
+    command: postgres -c shared_preload_libraries='pg_branch'
