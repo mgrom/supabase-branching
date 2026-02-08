@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+HOST="localhost"
+PORT="5432"
+USER="postgres"
+DB="postgres"
+
+psql_cmd() {
+    psql -h "$HOST" -p "$PORT" -U "$USER" -d "$DB" -tAc "$1"
+}
+
+case "${1:-}" in
+    create)
+        name="$2"
+        echo "creating branch '$name'..."
+        psql_cmd "CREATE DATABASE \"$name\" WITH TEMPLATE \"$DB\";"
+        echo "done — connect: postgresql://$USER@$HOST:$PORT/$name"
+        ;;
+    list)
+        echo "databases:"
+        psql_cmd "SELECT datname FROM pg_database WHERE datistemplate = false ORDER BY datname;"
+        ;;
+    *)
+        echo "usage: branch <create|list> [name]"
+        ;;
+esac
