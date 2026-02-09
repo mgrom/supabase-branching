@@ -17,6 +17,18 @@ usage() {
     exit 1
 }
 
+check_deps() {
+    local missing=0
+    for cmd in mkfs.btrfs mount truncate; do
+        command -v "$cmd" &>/dev/null || { echo "missing: $cmd"; missing=1; }
+    done
+    [ "$missing" -eq 1 ] && { echo "install btrfs-progs"; exit 1; }
+}
+
+check_root() {
+    [ "$(id -u)" -ne 0 ] && { echo "error: run as root"; exit 1; }
+}
+
 setup_loopback() {
     mkdir -p "$(dirname "$IMG")"
     [ -f "$IMG" ] && { echo "error: $IMG exists, remove first"; exit 1; }
@@ -52,6 +64,9 @@ while [ $# -gt 0 ]; do
 done
 [ -z "$MODE" ] && usage
 
+check_deps
+check_root
+
 case "$MODE" in
     loopback) setup_loopback ;;
     device) setup_device "$DEVICE" ;;
@@ -59,5 +74,5 @@ esac
 
 echo ""
 echo "btrfs ready at $MOUNT"
-echo "fstab entry:"
+echo "fstab:"
 [ "$MODE" = "loopback" ] && echo "  $IMG  $MOUNT  btrfs  loop  0  0" || echo "  $DEVICE  $MOUNT  btrfs  defaults  0  0"
