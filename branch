@@ -1,27 +1,60 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-HOST="localhost"
-PORT="5432"
-USER="postgres"
-DB="postgres"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+if [ -f "$SCRIPT_DIR/.env" ]; then set -a; source "$SCRIPT_DIR/.env"; set +a; fi
 
-psql_cmd() {
-    psql -h "$HOST" -p "$PORT" -U "$USER" -d "$DB" -tAc "$1"
+DB="${POSTGRES_DB:-postgres}"
+HOST="${PGHOST:-localhost}"
+PORT="${POSTGRES_PORT:-5432}"
+USER="${PGUSER:-postgres}"
+export PGPASSWORD="${POSTGRES_PASSWORD:-}"
+
+psql_cmd() { psql -h "$HOST" -p "$PORT" -U "$USER" -d "$DB" -tAc "$1"; }
+psql_fmt() { psql -h "$HOST" -p "$PORT" -U "$USER" -d "$DB" --pset=format=wrapped -c "$1"; }
+
+cmd_create() {
+    local name="$1" source="${2:-$DB}"
+    echo "creating branch '$name' from '$source'..."
+    psql_cmd "CREATE DATABASE \"$name\" WITH TEMPLATE \"$source\";"
+    echo "branch '$name' created"
+    echo "postgresql://$USER:$PGPASSWORD@$HOST:$PORT/$name"
+}
+cmd_list() {
+    psql_fmt "SELECT datname AS name, pg_size_pretty(pg_database_size(datname)) AS size FROM pg_database WHERE datistemplate = false ORDER BY datname;"
+}
+cmd_delete() {
+    local name="$1"
+    psql_cmd "DROP DATABASE IF EXISTS \"$name\";"
+    echo "branch '$name' deleted"
+}
+cmd_switch() { echo "postgresql://$USER:$PGPASSWORD@$HOST:$PORT/$1"; }
+cmd_status() {
+    echo "main: $DB @ $HOST:$PORT"
+    echo ""
+    psql_fmt "SELECT datname AS name, pg_size_pretty(pg_database_size(datname)) AS size, (SELECT count(*) FROM pg_stat_activity WHERE datname = d.datname) AS conns FROM pg_database d WHERE datistemplate = false ORDER BY datname;"
+}
+usage() {
+    echo "usage: branch <command> [args]"
+    echo "  create <name> [--from <db>]   create branch"
+    echo "  list                           list branches"
+    echo "  delete <name>                  drop branch"
+    echo "  switch <name>                  connection string"
+    echo "  status                         overview"
+    exit 1
 }
 
-case "${1:-}" in
+[ $# -lt 1 ] && usage
+CMD="$1"; shift
+case "$CMD" in
     create)
-        name="$2"
-        echo "creating branch '$name'..."
-        psql_cmd "CREATE DATABASE \"$name\" WITH TEMPLATE \"$DB\";"
-        echo "done — connect: postgresql://$USER@$HOST:$PORT/$name"
-        ;;
-    list)
-        echo "databases:"
-        psql_cmd "SELECT datname FROM pg_database WHERE datistemplate = false ORDER BY datname;"
-        ;;
-    *)
-        echo "usage: branch <create|list> [name]"
-        ;;
+        [ $# -lt 1 ] && { echo "error: name required"; exit 1; }
+        NAME="$1"; shift; FROM="$DB"
+        while [ $# -gt 0 ]; do case "$1" in --from) FROM="$2"; shift 2 ;; *) shift ;; esac; done
+        cmd_create "$NAME" "$FROM" ;;
+    list) cmd_list ;;
+    delete) [ $# -lt 1 ] && { echo "error: name required"; exit 1; }; cmd_delete "$1" ;;
+    switch) [ $# -lt 1 ] && { echo "error: name required"; exit 1; }; cmd_switch "$1" ;;
+    status) cmd_status ;;
+    *) usage ;;
 esac
