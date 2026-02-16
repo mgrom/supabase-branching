@@ -14,8 +14,8 @@ psql_cmd() { psql -h "$HOST" -p "$PORT" -U "$USER" -d "$DB" -tAc "$1"; }
 psql_fmt() { psql -h "$HOST" -p "$PORT" -U "$USER" -d "$DB" --pset=format=wrapped -c "$1"; }
 
 ensure_extension() {
-    psql_cmd "CREATE EXTENSION IF NOT EXISTS pg_branch" 2>/dev/null || {
-        echo "error: pg_branch extension not available"
+    psql_cmd "CREATE EXTENSION IF NOT EXISTS pg_data_branching" 2>/dev/null || {
+        echo "error: pg_data_branching extension not available"
         echo "are you using the custom image? (make build)"
         exit 1
     }

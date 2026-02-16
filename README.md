@@ -44,7 +44,7 @@ the build script (`build.sh`):
 4. patches `postgresql.conf` to add pg_data_branching to `shared_preload_libraries`
 5. builds the docker image
 
-the pg_data_branching extension ([NAlexPear/pg_data_branching](https://github.com/NAlexPear/pg_data_branching)) hooks into postgres `CREATE DATABASE ... WITH TEMPLATE` and replaces file-level copying with btrfs snapshots. branching a 50GB database takes the same time as branching an empty one.
+the pg_data_branching extension ([mgrom/pg_data_branching](https://github.com/mgrom/pg_data_branching)) uses filesystem snapshots (btrfs + zfs) to make `CREATE DATABASE ... WITH TEMPLATE` near-instant regardless of database size.
 
 
 ## branch cli
