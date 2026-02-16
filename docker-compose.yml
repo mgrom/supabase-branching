@@ -10,7 +10,7 @@ services:
       - ${BTRFS_MOUNT:-/mnt/pgdata}:/var/lib/postgresql/data
     command: >
       postgres
-      -c shared_preload_libraries='pg_branch'
+      -c shared_preload_libraries='pg_data_branching'
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s

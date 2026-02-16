@@ -28,38 +28,36 @@ cd "$BUILD_DIR/supabase_postgres"
 
 if [ ! -f "flake.nix" ]; then
     echo "error: no flake.nix in supabase/postgres@$REF"
-    echo "this tool expects the nix-based build. check that REF is correct."
+    echo "this tool expects the nix-based build system"
     exit 1
 fi
 
-# inject pg_branch nix derivation
-echo "injecting pg_branch extension..."
-cp "$SCRIPT_DIR/patches/pg_branch.nix" nix/ext/pg_branch.nix
+# inject pg_data_branching nix derivation
+echo "injecting pg_data_branching extension..."
+cp "$SCRIPT_DIR/patches/pg_data_branching.nix" nix/ext/pg_data_branching.nix
 
-if ! grep -q "pg_branch" flake.nix; then
-    sed -i '/\.\/nix\/ext\/supautils\.nix/a\          ./nix/ext/pg_branch.nix' flake.nix
+if ! grep -q "pg_data_branching" flake.nix; then
+    sed -i '/\.\/nix\/ext\/supautils\.nix/a\          ./nix/ext/pg_data_branching.nix' flake.nix
     echo "  patched flake.nix"
 else
     echo "  flake.nix already patched"
 fi
 
 CONF="ansible/files/postgresql_config/postgresql.conf.j2"
-if [ -f "$CONF" ] && ! grep -q "pg_branch" "$CONF"; then
-    sed -i "s/shared_preload_libraries = '\(.*\)'/shared_preload_libraries = '\1, pg_branch'/" "$CONF"
+if [ -f "$CONF" ] && ! grep -q "pg_data_branching" "$CONF"; then
+    sed -i "s/shared_preload_libraries = '\(.*\)'/shared_preload_libraries = '\1, pg_data_branching'/" "$CONF"
     echo "  patched shared_preload_libraries"
 elif [ ! -f "$CONF" ]; then
-    echo "  warning: $CONF not found, shared_preload_libraries not patched"
-    echo "  you may need to configure pg_branch manually"
+    echo "  warning: $CONF not found, configure shared_preload_libraries manually"
 fi
 
-# find and run dockerfile
+# build docker image
 if [ -f "Dockerfile" ]; then
     docker build -t "$IMAGE" .
 elif [ -f "docker/Dockerfile" ]; then
     docker build -t "$IMAGE" -f docker/Dockerfile .
 else
     echo "error: no Dockerfile found in supabase/postgres"
-    echo "repo structure may have changed"
     exit 1
 fi
 

@@ -1,10 +1,10 @@
 # supabase-branching
 
-database branching for self-hosted supabase using [pg_branch](https://github.com/NAlexPear/pg_branch) and btrfs copy-on-write snapshots.
+database branching for self-hosted supabase using [pg_data_branching](https://github.com/mgrom/pg_data_branching) and btrfs copy-on-write snapshots.
 
 creates instant database branches regardless of size. no more waiting for `pg_dump`/`pg_restore` cycles on large databases.
 
-works by injecting the pg_branch extension into the upstream [supabase/postgres](https://github.com/supabase/postgres) nix build at image build time. pg_branch uses btrfs snapshots under the hood, making `CREATE DATABASE ... WITH TEMPLATE` near-instant even on multi-GB databases.
+works by injecting the pg_data_branching extension into the upstream [supabase/postgres](https://github.com/supabase/postgres) nix build at image build time. pg_data_branching uses btrfs snapshots under the hood, making `CREATE DATABASE ... WITH TEMPLATE` near-instant even on multi-GB databases.
 
 ## requirements
 
@@ -22,7 +22,7 @@ cp .env.example .env
 # prepare btrfs volume (skip if you already have one)
 sudo ./setup-btrfs.sh --loopback
 
-# build custom postgres image with pg_branch
+# build custom postgres image with pg_data_branching
 make build
 
 # start
@@ -39,14 +39,13 @@ make up
 the build script (`build.sh`):
 
 1. clones [supabase/postgres](https://github.com/supabase/postgres) upstream
-2. copies `patches/pg_branch.nix` into the nix extension directory
-3. patches `flake.nix` to include pg_branch in the build
-4. patches `postgresql.conf` to add pg_branch to `shared_preload_libraries`
+2. copies `patches/pg_data_branching.nix` into the nix extension directory
+3. patches `flake.nix` to include pg_data_branching in the build
+4. patches `postgresql.conf` to add pg_data_branching to `shared_preload_libraries`
 5. builds the docker image
 
-the pg_branch extension ([NAlexPear/pg_branch](https://github.com/NAlexPear/pg_branch)) hooks into postgres `CREATE DATABASE ... WITH TEMPLATE` and replaces file-level copying with btrfs snapshots. branching a 50GB database takes the same time as branching an empty one.
+the pg_data_branching extension ([NAlexPear/pg_data_branching](https://github.com/NAlexPear/pg_data_branching)) hooks into postgres `CREATE DATABASE ... WITH TEMPLATE` and replaces file-level copying with btrfs snapshots. branching a 50GB database takes the same time as branching an empty one.
 
-the nix derivation fetches pre-built binaries from [boltpl81/pg_branch](https://github.com/boltpl81/pg_branch).
 
 ## branch cli
 
@@ -72,7 +71,7 @@ see `.env.example`. key settings:
 ## limitations
 
 - linux only (btrfs requirement)
-- pg_branch is experimental / pre-alpha
+- pg_data_branching is experimental / pre-alpha
 - branches share the btrfs volume — deleting volume removes all branches
 - no automatic branch-per-PR integration yet
 
