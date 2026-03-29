@@ -37,7 +37,14 @@ echo "injecting pg_data_branching extension..."
 cp "$SCRIPT_DIR/patches/pg_data_branching.nix" nix/ext/pg_data_branching.nix
 
 if ! grep -q "pg_data_branching" flake.nix; then
-    sed -i '/\.\/nix\/ext\/supautils\.nix/a\          ./nix/ext/pg_data_branching.nix' flake.nix
+    if grep -q '\.\/nix\/ext\/supautils\.nix' flake.nix; then
+        sed -i '/\.\/nix\/ext\/supautils\.nix/a\          ./nix/ext/pg_data_branching.nix' flake.nix
+    else
+        echo "error: expected anchor './nix/ext/supautils.nix' not found in flake.nix"
+        echo "the upstream layout may have changed; patch flake.nix manually"
+        exit 1
+    fi
+    grep -q "pg_data_branching" flake.nix || { echo "error: flake.nix patch failed"; exit 1; }
     echo "  patched flake.nix"
 else
     echo "  flake.nix already patched"
@@ -46,9 +53,16 @@ fi
 CONF="ansible/files/postgresql_config/postgresql.conf.j2"
 if [ -f "$CONF" ] && ! grep -q "pg_data_branching" "$CONF"; then
     sed -i "s/shared_preload_libraries = '\(.*\)'/shared_preload_libraries = '\1, pg_data_branching'/" "$CONF"
+    if ! grep -q "pg_data_branching" "$CONF"; then
+        echo "error: failed to patch shared_preload_libraries in $CONF"
+        echo "format may have changed; add pg_data_branching manually"
+        exit 1
+    fi
     echo "  patched shared_preload_libraries"
 elif [ ! -f "$CONF" ]; then
-    echo "  warning: $CONF not found, configure shared_preload_libraries manually"
+    echo "error: $CONF not found; cannot configure shared_preload_libraries"
+    echo "add 'pg_data_branching' to shared_preload_libraries manually and rebuild"
+    exit 1
 fi
 
 # build docker image

@@ -10,8 +10,9 @@ rustPlatform.buildRustPackage rec {
   src = fetchFromGitHub {
     owner = "mgrom";
     repo = "pg_data_branching";
+    # pin to a specific commit for reproducible builds
     rev = "main";
-    sha256 = lib.fakeSha256;
+    hash = "";
   };
 
   cargoLock.lockFile = "${src}/Cargo.lock";
@@ -28,12 +29,20 @@ rustPlatform.buildRustPackage rec {
     cargo pgrx init --pg${lib.versions.major postgresql.version} ${postgresql}/bin/pg_config
   '';
 
+  postBuild = ''
+    cargo pgrx schema --pg-config ${PG_CONFIG} -o pg_data_branching--${version}.sql
+  '';
+
   installPhase = ''
     mkdir -p $out/{lib,share/postgresql/extension}
 
-    find target/release -name "pg_data_branching.so" -exec cp {} $out/lib/ \;
-    cp pg_data_branching.control $out/share/postgresql/extension/
-    cp pg_data_branching--*.sql $out/share/postgresql/extension/ 2>/dev/null || true
+    so=$(find target/release -maxdepth 1 -name "libpg_data_branching.so" | head -1)
+    [ -z "$so" ] && { echo "error: libpg_data_branching.so not found"; exit 1; }
+    cp "$so" $out/lib/pg_data_branching.so
+
+    sed "s/@CARGO_VERSION@/${version}/" pg_data_branching.control \
+      > $out/share/postgresql/extension/pg_data_branching.control
+    cp pg_data_branching--${version}.sql $out/share/postgresql/extension/
 
     patchelf --set-rpath "${btrfs-progs}/lib:${postgresql}/lib" $out/lib/pg_data_branching.so
   '';
